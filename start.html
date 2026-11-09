@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PMM 上手</title>
+<meta name="description" content="账本、依赖图、甘特、文档、看板，都压缩成和 Agent 的一段对话。经 MCP 同步进团队共用的一本账。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23121316'/%3E%3Cmask id='c'%3E%3Crect width='64' height='64' fill='%23fff'/%3E%3Cpath d='M9 32a23 8.5 0 0 0 46 0' fill='none' stroke='%23000' stroke-width='6.5' stroke-linecap='round'/%3E%3C/mask%3E%3Cg transform='rotate(-24 32 32)' fill='none' stroke='%23dcb872' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='M9 32a23 8.5 0 0 1 46 0' stroke-opacity='.55'/%3E%3Ccircle cx='32' cy='32' r='11.5' fill='%23dcb872' stroke='none' mask='url(%23c)'/%3E%3Cpath d='M9 32a23 8.5 0 0 0 46 0'/%3E%3C/g%3E%3C/svg%3E">
+<script>
+  // 首屏绘制前定语言（与 index.html 共用记忆键），并标记是否播放动画。
+  (() => {
+    const r = document.documentElement;
+    let l = new URLSearchParams(location.search).get('lang');
+    if (!l) { try { l = localStorage.getItem('pmm-intro-lang'); } catch { l = null; } }
+    if (!l) l = (navigator.languages || [navigator.language]).some(x => /^zh/i.test(x)) ? 'zh' : 'en';
+    if (l === 'en') { r.classList.add('en'); r.lang = 'en'; }
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window) r.classList.add('motion');
+  })();
+</script>
+<style>
+:root {
+  --bg: #07080b; --s1: rgba(255,255,255,.04); --s2: rgba(255,255,255,.065); --s3: rgba(255,255,255,.1);
+  --t1: #f4f5f7; --t2: #bcc0c8; --t3: #8f95a1; --line: rgba(255,255,255,.08);
+  --agent: #86d4f5; --agent-ink: #b5e5f8; --agent-fill: rgba(134,212,245,.12); --glow: rgba(134,212,245,.22);
+  --gold: #dcb872; --gold-fill: rgba(220,184,114,.13); --good: #66d39c; --good-fill: rgba(102,211,156,.12);
+  --bad: #f69890; --bad-fill: rgba(246,152,144,.10);
+  --hi: inset 0 1px 0 rgba(255,255,255,.06); --glass: rgba(16,18,23,.72); --panel: #121419; --on-agent: #07131a;
+  --me: #2a2d35;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ease: cubic-bezier(.2,.7,.2,1); --spring: cubic-bezier(.34,1.4,.5,1);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f6f6f3; --s1: rgba(0,0,0,.035); --s2: rgba(0,0,0,.05); --s3: rgba(0,0,0,.08);
+    --t1: #15171c; --t2: #4a4f59; --t3: #6b717c; --line: rgba(0,0,0,.08);
+    --agent: #1f7fae; --agent-ink: #17698f; --agent-fill: rgba(31,127,174,.10); --glow: rgba(31,127,174,.18);
+    --gold: #9c7424; --gold-fill: rgba(156,116,36,.12); --good: #1d8a55; --good-fill: rgba(29,138,85,.10);
+    --bad: #c2463b; --bad-fill: rgba(194,70,59,.08);
+    --hi: inset 0 1px 0 rgba(255,255,255,.7); --glass: rgba(246,246,243,.82); --panel: #ffffff; --on-agent: #fff;
+    --me: #e9eaec;
+    color-scheme: light;
+  }
+}
+:root[data-theme="dark"] { color-scheme: dark; }
+html:not(.en) .en, html.en .zh { display: none !important; }
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--t1); font: 16px/1.65 -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif; overflow-x: hidden; }
+a { color: var(--agent-ink); }
+:focus-visible { outline: 2px solid var(--agent); outline-offset: 2px; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+@media (max-width: 520px) { .wrap { padding: 0 16px; } }
+
+.top { position: fixed; top: 14px; right: 14px; z-index: 20; display: flex; gap: 8px; }
+.pill { padding: 7px 14px; border: 0; border-radius: 999px; cursor: pointer; text-decoration: none; font: inherit; font-size: 13px; font-weight: 600; color: var(--t1); background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: var(--hi), 0 6px 24px rgba(0,0,0,.18); }
+.pill:hover { background: var(--s3); }
+
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; border-radius: 999px; border: 0; font: inherit; font-weight: 600; font-size: 15px; text-decoration: none; cursor: pointer; transition: transform .14s, box-shadow .18s, background .18s; }
+.btn:active { transform: scale(.97); }
+.btn.primary { background: var(--agent); color: var(--on-agent); box-shadow: 0 6px 22px var(--glow); }
+.btn.primary:hover { box-shadow: 0 10px 32px var(--glow); }
+.btn.ghost { background: var(--s2); color: var(--t1); }
+.btn.ghost:hover { background: var(--s3); }
+
+/* ---------- Hero ---------- */
+.hero { padding: 104px 0 8px; position: relative; }
+.hero::before { content: ""; position: absolute; inset: 0 0 auto; height: 620px; z-index: -1; pointer-events: none; opacity: .75;
+  background: radial-gradient(50% 50% at 78% 30%, var(--glow), transparent 70%), radial-gradient(40% 40% at 12% 10%, var(--gold-fill), transparent 70%); }
+.brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .04em; color: var(--t2); margin-bottom: 22px; text-decoration: none; }
+.brand svg { width: 28px; height: 28px; }
+h1 { font-size: clamp(30px, 4.6vw, 52px); line-height: 1.18; margin: 0 0 18px; letter-spacing: -.01em; }
+h1 em { font-style: normal; color: var(--agent); }
+.lead { font-size: clamp(16px, 1.8vw, 19px); color: var(--t2); max-width: 680px; margin: 0 0 28px; }
+.hint { margin-top: 40px; font-size: 13px; color: var(--t3); display: inline-flex; align-items: center; gap: 8px; }
+.motion .hint span.arr { display: inline-block; animation: nudge 1.6s ease-in-out infinite; }
+@keyframes nudge { 50% { transform: translateY(4px); } }
+html:not(.motion) .hint { display: none; }
+.cta { display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* ---------- Fall: PMM's views drop into the conversation as you scroll ---------- */
+.fall { position: relative; }
+.motion .fall { height: 340vh; }
+.fall-sticky { position: relative; }
+.motion .fall-sticky { position: sticky; top: 0; height: 100vh; overflow: hidden; }
+.fall-title { text-align: center; padding: 0 16px; }
+.motion .fall-title { position: absolute; left: 0; right: 0; top: 7vh; }
+.fall-title .t { margin: 0; font-size: clamp(20px, 2.6vw, 30px); font-weight: 700; line-height: 1.3; transition: opacity .4s; }
+.fall-title .t2 { color: var(--agent); }
+.motion .fall-title .t2 { position: absolute; left: 0; right: 0; top: 0; opacity: 0; }
+.motion .fall[data-ph="b"] .fall-title .t1 { opacity: 0; }
+.motion .fall[data-ph="b"] .fall-title .t2 { opacity: 1; }
+html:not(.motion) .fall-title .t2 { margin-top: 6px; }
+.fall-field { position: relative; max-width: 1080px; margin: 0 auto; }
+.motion .fall-field { position: absolute; left: 0; right: 0; top: 16vh; height: 44vh; }
+html:not(.motion) .fall-field { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; padding: 24px 16px; }
+.fv {
+  width: 196px; padding: 10px 12px 12px; border-radius: 14px; background: var(--panel);
+  box-shadow: 0 0 0 1px var(--line), 0 14px 34px rgba(0,0,0,.28); font-size: 11.5px; color: var(--t2);
+  will-change: transform, opacity;
+}
+.motion .fv { position: absolute; left: var(--x); top: var(--y); transform: rotate(var(--r)); }
+@media (max-width: 640px) {
+  .fv { width: 128px; padding: 8px 9px 9px; font-size: 9.5px; }
+  .fv-h { font-size: 10px; margin-bottom: 6px; }
+  .motion .fv { left: min(var(--x), calc(100% - 132px)); }
+  .motion .fall-title { top: 10vh; }
+  .fall-title .t { font-size: 18px; }
+  .motion .fall-field { top: 24vh; height: 30vh; }
+  .motion .fall-chat { bottom: 3vh; }
+  .motion .fall .msgs { min-height: 0; }
+  .motion .fall[data-c="0"] .msgs { display: none; }
+  .motion .fall-field { top: 22vh; height: 34vh; }
+}
+.fv-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 11px; font-weight: 600; color: var(--t1); letter-spacing: .02em; }
+.fv-h em { font-style: normal; font-weight: 500; color: var(--t3); }
+.fv svg { display: block; width: 100%; height: auto; }
+.lg { display: grid; gap: 4px; }
+.lg div { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: center; padding: 4px 6px; border-radius: 6px; background: var(--s2); white-space: nowrap; }
+.lg b { font-weight: 500; color: var(--t1); overflow: hidden; text-overflow: ellipsis; }
+.dotc { width: 7px; height: 7px; border-radius: 50%; }
+.kb { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.kb > div { display: grid; gap: 4px; align-content: start; padding: 4px; border-radius: 6px; background: var(--s2); min-height: 62px; }
+.kb i { display: block; height: 11px; border-radius: 3px; background: var(--s3); }
+.kb .hl { background: var(--agent-fill); }
+.doc i { display: block; height: 5px; border-radius: 3px; background: var(--s3); margin-top: 6px; }
+.doc .ttl { height: 8px; width: 60%; background: var(--t3); opacity: .5; margin-top: 0; }
+.ck { display: grid; gap: 5px; }
+.ck div { display: flex; gap: 6px; align-items: center; }
+.ck .bx { width: 13px; height: 13px; border-radius: 4px; display: grid; place-items: center; font-size: 9px; background: var(--good-fill); color: var(--good); flex: none; }
+
+.fall-chat {
+  width: min(560px, calc(100vw - 32px)); margin: 0 auto; border-radius: 20px; background: var(--panel);
+  box-shadow: var(--hi), 0 24px 60px rgba(0,0,0,.35), 0 0 0 1px var(--line); overflow: hidden; transition: box-shadow .3s;
+}
+.motion .fall-chat { position: absolute; left: 50%; bottom: 4vh; transform: translateX(-50%); transition: box-shadow .3s, bottom .7s var(--ease); }
+.motion .fall:not([data-c="0"]) .fall-chat { bottom: max(4vh, calc(50vh - 190px)); }
+.fall-chat.gulp { box-shadow: var(--hi), 0 24px 60px rgba(0,0,0,.35), 0 0 0 2px var(--agent), 0 0 44px var(--glow); }
+.chat-head { display: flex; align-items: center; gap: 8px; padding: 11px 16px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--t2); }
+.chat-head .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 3px var(--good-fill); }
+.chat-head b { color: var(--t1); font-weight: 600; }
+.chat-head .mcp { margin-left: auto; font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--agent-fill); color: var(--agent-ink); }
+.inside { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; padding: 9px 14px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--t3); }
+.inside .ch { padding: 1px 8px; border-radius: 999px; background: var(--s2); color: var(--t3); transition: background .3s, color .3s, transform .35s var(--spring); }
+.motion .inside .ch:not(.lit) { opacity: .35; }
+.inside .ch.lit { background: var(--agent-fill); color: var(--agent-ink); transform: scale(1.06); }
+.msgs { padding: 14px; display: flex; flex-direction: column; gap: 9px; min-height: 150px; }
+.bubble { max-width: 90%; padding: 9px 13px; border-radius: 16px; font-size: 14px; line-height: 1.55; transition: opacity .35s var(--ease), transform .45s var(--spring); }
+.bubble.me { align-self: flex-end; background: var(--me); color: var(--t1); border-bottom-right-radius: 5px; }
+.bubble.ai { align-self: flex-start; background: var(--s2); color: var(--t1); border-bottom-left-radius: 5px; }
+.typing { display: inline-flex; gap: 4px; padding: 12px 14px; }
+.typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--t3); animation: bob 1s ease-in-out infinite; }
+.typing span:nth-child(2) { animation-delay: .15s; } .typing span:nth-child(3) { animation-delay: .3s; }
+@keyframes bob { 0%, 100% { transform: translateY(0); opacity: .5; } 50% { transform: translateY(-4px); opacity: 1; } }
+.motion .fall .say-me, .motion .fall .say-ai { opacity: 0; transform: translateY(8px); }
+.motion .fall .say-dots { display: none; }
+.motion .fall[data-c="1"] .say-me, .motion .fall[data-c="2"] .say-me, .motion .fall[data-c="3"] .say-me { opacity: 1; transform: none; }
+.motion .fall[data-c="2"] .say-dots { display: inline-flex; }
+.motion .fall[data-c="3"] .say-ai { opacity: 1; transform: none; }
+html:not(.motion) .say-dots { display: none; }
+.fall-chat .input { margin: 0 12px 12px; display: flex; align-items: center; padding: 9px 12px 9px 16px; border-radius: 14px; background: var(--s2); color: var(--t3); font-size: 13.5px; }
+.fall-chat .input .send { margin-left: auto; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--s3); color: var(--t2); font-size: 12px; }
+@media (max-height: 700px) { .motion .fall-chat .msgs { min-height: 0; } .motion .inside { display: none; } }
+
+
+/* ---------- Sections ---------- */
+section { padding: 72px 0 0; scroll-margin-top: 20px; }
+.eyebrow { font-size: 13px; letter-spacing: .14em; color: var(--gold); font-weight: 600; margin: 0 0 8px; }
+h2 { font-size: clamp(24px, 3vw, 34px); line-height: 1.25; margin: 0 0 10px; }
+.sub { color: var(--t2); max-width: 680px; margin: 0 0 26px; }
+
+/* Audience */
+.aud { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+@media (max-width: 900px) { .aud { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 440px) { .aud { grid-template-columns: 1fr; } }
+.a { padding: 18px; border-radius: 18px; background: var(--s1); box-shadow: var(--hi); }
+.a .ico { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; margin-bottom: 12px; background: var(--agent-fill); color: var(--agent); }
+.a:nth-child(2) .ico { background: var(--gold-fill); color: var(--gold); }
+.a:nth-child(3) .ico { background: var(--good-fill); color: var(--good); }
+.a:nth-child(4) .ico { background: var(--bad-fill); color: var(--bad); }
+.a .ico svg { width: 20px; height: 20px; }
+.a h3 { margin: 0 0 6px; font-size: 16px; }
+.a p { margin: 0; font-size: 14px; color: var(--t2); }
+
+/* Scenario cards: one short exchange each */
+.scenes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 820px) { .scenes { grid-template-columns: 1fr; } }
+.scene { border-radius: 20px; background: var(--s1); box-shadow: var(--hi); padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.scene-h { display: flex; align-items: center; gap: 10px; }
+.scene-h .num { width: 26px; height: 26px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; background: var(--agent); color: var(--on-agent); }
+.scene-h h3 { margin: 0; font-size: 18px; line-height: 1.35; }
+.mini { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 16px; background: var(--panel); box-shadow: 0 0 0 1px var(--line); min-height: 168px; }
+.mini .bubble { font-size: 13.5px; }
+.mini .typing { align-self: flex-start; background: var(--s2); border-radius: 16px; border-bottom-left-radius: 5px; }
+.motion .mini > * { opacity: 0; transform: translateY(8px); }
+.motion .mini .typing { display: none; }
+html:not(.motion) .mini .typing { display: none; }
+.motion .mini.play .me { animation: pop .45s var(--spring) .15s forwards; }
+.motion .mini.play .typing { display: inline-flex; animation: pop .3s var(--ease) .7s forwards, out .2s 1.6s forwards; }
+.motion .mini.play .ai { animation: pop .5s var(--spring) 1.75s forwards; }
+@keyframes pop { to { opacity: 1; transform: none; } }
+@keyframes out { to { opacity: 0; height: 0; padding: 0; margin: -8px 0 0; } }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.tag { font-size: 12px; padding: 2px 9px; border-radius: 999px; background: var(--s3); color: var(--t2); white-space: nowrap; }
+.tag.ok { background: var(--good-fill); color: var(--good); }
+.tag.ag { background: var(--agent-fill); color: var(--agent-ink); }
+.tag.gd { background: var(--gold-fill); color: var(--gold); }
+.tag.bd { background: var(--bad-fill); color: var(--bad); }
+.instead { margin: 0; font-size: 13.5px; color: var(--t3); }
+.instead s { color: var(--t3); text-decoration-color: var(--bad); }
+.note { margin: 12px 0 0; color: var(--t3); font-size: 13px; }
+
+
+/* Talk header + attention meter */
+.talk-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+.talk-head .sub { margin-bottom: 26px; }
+.meter { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px; background: var(--s1); box-shadow: var(--hi); margin-bottom: 26px; font-size: 13px; }
+.m-l { font-family: var(--mono); font-size: 12px; color: var(--t3); }
+.m-bar { width: 110px; height: 8px; border-radius: 999px; background: var(--s3); overflow: hidden; }
+.m-bar i { display: block; height: 100%; width: 18%; border-radius: inherit; background: var(--good); }
+.motion .m-bar i { animation: breathe 4s ease-in-out infinite; }
+@keyframes breathe { 50% { width: 26%; } }
+.m-v { color: var(--good); font-weight: 600; }
+
+/* Look: calm health card */
+.look { margin-top: 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: center; padding: 28px; border-radius: 22px; background: var(--s1); box-shadow: var(--hi); }
+@media (max-width: 820px) { .look { grid-template-columns: 1fr; padding: 22px; } }
+.look h3 { margin: 0 0 14px; font-size: clamp(20px, 2.4vw, 26px); line-height: 1.3; }
+.look ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.look li { font-size: 14.5px; color: var(--t2); padding-left: 16px; position: relative; }
+.look li::before { content: ""; position: absolute; left: 0; top: .6em; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+.look li b { color: var(--t1); margin-right: 8px; }
+.health { padding: 20px; border-radius: 18px; background: var(--panel); box-shadow: 0 0 0 1px var(--line), 0 18px 40px rgba(0,0,0,.18); }
+.h-top { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
+.ring { position: relative; width: 72px; height: 72px; flex: none; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 7; stroke-linecap: round; }
+.ring .trk { stroke: var(--s3); }
+.ring .val { stroke: var(--good); stroke-dasharray: 213.6; stroke-dashoffset: calc(213.6 * (1 - var(--v))); }
+.motion .look:not(.play) .ring .val { stroke-dashoffset: 213.6; }
+.ring .val { transition: stroke-dashoffset 1.4s var(--ease); }
+.ring b { position: absolute; inset: 0; display: grid; place-items: center; font-size: 22px; }
+.h-l { font-weight: 600; }
+.h-s { font-size: 13px; color: var(--t3); }
+.ppl { display: grid; gap: 10px; }
+.pp { display: grid; grid-template-columns: 28px 70px 1fr auto; gap: 10px; align-items: center; font-size: 13.5px; }
+.av { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 12.5px; font-weight: 700; background: var(--s3); color: var(--t1); }
+.av.ag { background: var(--agent-fill); color: var(--agent-ink); }
+.nm { color: var(--t2); white-space: nowrap; }
+.bar { height: 6px; border-radius: 999px; background: var(--s3); overflow: hidden; }
+.bar i { display: block; height: 100%; width: var(--w); border-radius: inherit; background: var(--c, var(--good)); transition: width 1.2s var(--ease); }
+.motion .look:not(.play) .bar i { width: 0; }
+.st { font-size: 12px; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.st.ok { background: var(--good-fill); color: var(--good); } .st.gd { background: var(--gold-fill); color: var(--gold); }
+.st.bd { background: var(--bad-fill); color: var(--bad); } .st.ag { background: var(--agent-fill); color: var(--agent-ink); }
+@media (max-width: 400px) { .pp { grid-template-columns: 28px 1fr auto; } .pp .bar { display: none; } }
+
+/* Proof */
+.proof { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-top: 16px; }
+@media (max-width: 820px) { .proof { grid-template-columns: 1fr 1fr; } .proof .first { grid-column: 1 / -1; } }
+.p { padding: 16px 18px; border-radius: 16px; background: var(--s1); box-shadow: var(--hi); font-size: 14px; color: var(--t2); }
+.p b { display: block; font-size: 28px; line-height: 1.15; color: var(--good); }
+.p b.gold { color: var(--gold); }
+.p.first b { font-size: 15px; color: var(--t1); margin-bottom: 4px; }
+
+.band { margin-top: 48px; padding: 36px 28px; border-radius: 22px; text-align: center; background: radial-gradient(70% 100% at 50% 0%, var(--glow), transparent 70%), var(--s1); box-shadow: var(--hi); }
+.band h2 { margin-bottom: 8px; }
+.band p { margin: 0 auto 22px; color: var(--t2); max-width: 560px; }
+.band .cta { justify-content: center; }
+
+/* Steps */
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+@media (max-width: 820px) { .steps { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 440px) { .steps { grid-template-columns: 1fr; } }
+.step { padding: 16px 18px; border-radius: 16px; background: var(--s1); box-shadow: var(--hi); }
+.step .who { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; margin-bottom: 8px; background: var(--agent-fill); color: var(--agent-ink); }
+.step.human .who { background: var(--gold-fill); color: var(--gold); }
+.step h3 { margin: 0 0 4px; font-size: 16px; }
+.step p { margin: 0 0 8px; font-size: 14px; color: var(--t2); }
+.tools { display: flex; flex-wrap: wrap; gap: 4px; }
+.tools code { font-family: var(--mono); font-size: 11.5px; padding: 1px 6px; border-radius: 6px; background: var(--s2); color: var(--t3); }
+
+/* Connect */
+.conn { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 820px) { .conn { grid-template-columns: 1fr; } }
+.c { padding: 18px; border-radius: 16px; background: var(--s1); box-shadow: var(--hi); display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.c h3 { margin: 0; font-size: 16px; }
+.c p { margin: 0; font-size: 14px; color: var(--t2); }
+.codebox { position: relative; }
+.code { font-family: var(--mono); font-size: 12.5px; line-height: 1.6; padding: 10px 58px 10px 12px; border-radius: 10px; background: var(--s2); color: var(--t1); white-space: pre-wrap; word-break: break-all; }
+.codebox button { position: absolute; top: 7px; right: 7px; padding: 2px 9px; border: 0; border-radius: 999px; background: var(--s3); color: var(--t1); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.codebox button:hover { background: var(--agent-fill); color: var(--agent-ink); }
+.conn-foot { margin: 14px 0 0; color: var(--t3); font-size: 13.5px; }
+
+footer { padding: 64px 0 56px; color: var(--t3); font-size: 13px; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <a class="pill" href="./" data-keep-lang><span class="zh">原理与亮点</span><span class="en">Why PMM</span></a>
+  <button type="button" class="pill" id="lang"></button>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <a class="brand" href="./" data-keep-lang>
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#121316"/><mask id="ring-cut"><rect width="64" height="64" fill="#fff"/><path d="M9 32a23 8.5 0 0 0 46 0" fill="none" stroke="#000" stroke-width="6.5" stroke-linecap="round"/></mask><g transform="rotate(-24 32 32)" fill="none" stroke="#dcb872" stroke-width="2.6" stroke-linecap="round"><path d="M9 32a23 8.5 0 0 1 46 0" stroke-opacity=".55"/><circle cx="32" cy="32" r="11.5" fill="#dcb872" stroke="none" mask="url(#ring-cut)"/><path d="M9 32a23 8.5 0 0 0 46 0"/></g></svg>
+      PMM
+    </a>
+    <h1 class="zh">项目管理的一切，<br><em>压缩成一段对话。</em></h1>
+    <h1 class="en">All of project management,<br><em>compressed into one conversation.</em></h1>
+    <p class="lead zh">建需求、理需求、存证据、排安排，和 Agent 说一句就好，经 MCP 写进团队共用的一本账。要看全局时，打开一页：谁拖进度、谁需要帮助、整体健不健康。你的注意力始终轻松。</p>
+    <p class="lead en">Create and refine requirements, record evidence, plan the schedule: just tell your Agent, and it lands in your team’s shared ledger over MCP. When you want the big picture, open one page: who is behind, who needs help, how healthy it all is. Your attention stays light.</p>
+    <div class="cta">
+      <a class="btn primary" href="./#waitlist" data-keep-lang><span class="zh">加入 Waitlist</span><span class="en">Join the waitlist</span></a>
+      <a class="btn ghost" href="#connect"><span class="zh">怎么接入 ↓</span><span class="en">How to connect ↓</span></a>
+    </div>
+    <div class="hint"><span class="arr">↓</span><span class="zh">往下滚，看那些图表掉进对话里</span><span class="en">Scroll and watch the charts fall into the conversation</span></div>
+  </div>
+</header>
+
+<section class="fall" id="fall" data-ph="a" data-c="3" aria-label="PMM views compressed into one Agent conversation">
+  <div class="fall-sticky">
+    <div class="fall-title">
+      <p class="t t1 zh">PMM 里有账本、依赖图、甘特、燃尽、文档、看板……</p>
+      <p class="t t1 en">PMM has ledgers, dependency graphs, Gantt charts, burndowns, docs, boards…</p>
+      <p class="t t2 zh">不用一个个去学。它们都在对话里。</p>
+      <p class="t t2 en">You don’t have to learn any of them. They all live in the conversation.</p>
+    </div>
+    <div class="fall-field" id="field" aria-hidden="true">
+      <div class="fv" data-k="0" style="--x:3%;--y:4%;--r:-4deg">
+        <div class="fv-h"><span class="zh">账本卡片</span><span class="en">Ledger</span><em>R1</em></div>
+        <div class="lg">
+          <div><b class="zh">整理词表</b><b class="en">Glossary</b><span>Lin</span><span class="dotc" style="background:var(--good)"></span></div>
+          <div><b class="zh">界面接入</b><b class="en">Wire UI</b><span>Zhou</span><span class="dotc" style="background:var(--gold)"></span></div>
+          <div><b class="zh">逐页验收</b><b class="en">Check pages</b><span>Lin</span><span class="dotc" style="background:var(--t3)"></span></div>
+        </div>
+      </div>
+      <div class="fv" data-k="1" style="--x:27%;--y:0%;--r:3deg">
+        <div class="fv-h"><span class="zh">依赖关系</span><span class="en">Dependencies</span><em>T1→T4</em></div>
+        <svg viewBox="0 0 180 84"><g fill="none" stroke="currentColor" stroke-opacity=".45" stroke-width="1.4"><path d="M44 22 H70"/><path d="M110 22 H134"/><path d="M90 32 V52 H134"/><path d="M44 22 C56 22 56 62 70 62"/></g><g font-size="10" text-anchor="middle" font-family="sans-serif"><rect x="6" y="12" width="38" height="20" rx="6" fill="var(--agent-fill)"/><text x="25" y="26" fill="var(--agent-ink)">T1</text><rect x="70" y="12" width="40" height="20" rx="6" fill="var(--s3)"/><text x="90" y="26" fill="var(--t1)">T2</text><rect x="134" y="12" width="40" height="20" rx="6" fill="var(--s3)"/><text x="154" y="26" fill="var(--t1)">T3</text><rect x="70" y="52" width="40" height="20" rx="6" fill="var(--bad-fill)"/><text x="90" y="66" fill="var(--bad)">T4</text><rect x="134" y="44" width="40" height="20" rx="6" fill="var(--s3)"/><text x="154" y="58" fill="var(--t1)">T5</text></g></svg>
+      </div>
+      <div class="fv" data-k="2" style="--x:52%;--y:6%;--r:-2deg">
+        <div class="fv-h"><span class="zh">甘特排期</span><span class="en">Gantt</span><em>11月</em></div>
+        <svg viewBox="0 0 180 70"><g stroke="var(--line)"><path d="M45 0V70M90 0V70M135 0V70"/></g><rect x="4" y="6" width="70" height="10" rx="4" fill="var(--good)" opacity=".8"/><rect x="50" y="22" width="80" height="10" rx="4" fill="var(--gold)" opacity=".8"/><rect x="96" y="38" width="60" height="10" rx="4" fill="var(--agent)" opacity=".8"/><rect x="120" y="54" width="54" height="10" rx="4" fill="var(--t3)" opacity=".5"/><path d="M112 0V70" stroke="var(--bad)" stroke-dasharray="3 3"/></svg>
+      </div>
+      <div class="fv" data-k="3" style="--x:77%;--y:2%;--r:4deg">
+        <div class="fv-h"><span class="zh">燃尽图</span><span class="en">Burndown</span><em>Sprint 4</em></div>
+        <svg viewBox="0 0 180 70"><path d="M6 8 L174 64" stroke="var(--t3)" stroke-dasharray="4 4" fill="none"/><path d="M6 8 L30 14 L52 16 L74 30 L96 34 L118 44 L140 47" stroke="var(--agent)" stroke-width="2" fill="none"/><path d="M6 8 L30 14 L52 16 L74 30 L96 34 L118 44 L140 47 V66 H6Z" fill="var(--agent-fill)"/></svg>
+      </div>
+      <div class="fv" data-k="4" style="--x:8%;--y:52%;--r:3deg">
+        <div class="fv-h"><span class="zh">需求文档</span><span class="en">Spec</span><em>v3</em></div>
+        <div class="doc"><i class="ttl"></i><i style="width:92%"></i><i style="width:80%"></i><i style="width:88%"></i><i style="width:56%"></i><i style="width:74%"></i></div>
+      </div>
+      <div class="fv" data-k="5" style="--x:33%;--y:46%;--r:-3deg">
+        <div class="fv-h"><span class="zh">看板</span><span class="en">Board</span><em>12</em></div>
+        <div class="kb"><div><i></i><i></i><i></i></div><div><i class="hl"></i><i></i></div><div><i></i><i></i><i></i><i></i></div></div>
+      </div>
+      <div class="fv" data-k="6" style="--x:58%;--y:54%;--r:2deg">
+        <div class="fv-h"><span class="zh">验收与证据</span><span class="en">Acceptance</span><em>3/3</em></div>
+        <div class="ck"><div><span class="bx">✓</span><span class="zh">导出 CSV 正确</span><span class="en">CSV export correct</span></div><div><span class="bx">✓</span>PR #52</div><div><span class="bx">✓</span><span class="zh">测试 128 通过</span><span class="en">128 tests pass</span></div></div>
+      </div>
+      <div class="fv" data-k="7" style="--x:80%;--y:48%;--r:-4deg">
+        <div class="fv-h"><span class="zh">协作关系</span><span class="en">Team graph</span><em>6</em></div>
+        <svg viewBox="0 0 180 72"><g stroke="var(--t3)" stroke-opacity=".5"><path d="M90 36 L36 16M90 36 L36 58M90 36 L146 14M90 36 L148 58M36 16 L36 58"/></g><circle cx="90" cy="36" r="12" fill="var(--gold-fill)" stroke="var(--gold)"/><circle cx="36" cy="16" r="9" fill="var(--s3)"/><circle cx="36" cy="58" r="9" fill="var(--agent-fill)" stroke="var(--agent)"/><circle cx="146" cy="14" r="9" fill="var(--s3)"/><circle cx="148" cy="58" r="9" fill="var(--agent-fill)" stroke="var(--agent)"/></svg>
+      </div>
+    </div>
+
+    <div class="fall-chat" id="fchat">
+      <div class="chat-head"><span class="dot"></span><b>Claude Code</b><span class="zh">· 你的 Agent</span><span class="en">· your Agent</span><span class="mcp">MCP · PMM</span></div>
+      <div class="inside">
+        <span class="zh">已在对话里：</span><span class="en">Inside:</span>
+        <span class="ch" data-k="0"><span class="zh">账本</span><span class="en">Ledger</span></span><span class="ch" data-k="1"><span class="zh">依赖</span><span class="en">Deps</span></span><span class="ch" data-k="2"><span class="zh">甘特</span><span class="en">Gantt</span></span><span class="ch" data-k="3"><span class="zh">燃尽</span><span class="en">Burndown</span></span><span class="ch" data-k="4"><span class="zh">文档</span><span class="en">Spec</span></span><span class="ch" data-k="5"><span class="zh">看板</span><span class="en">Board</span></span><span class="ch" data-k="6"><span class="zh">验收</span><span class="en">Acceptance</span></span><span class="ch" data-k="7"><span class="zh">关系</span><span class="en">Team</span></span>
+      </div>
+      <div class="msgs">
+        <div class="bubble me say-me"><span class="zh">项目怎么样了？</span><span class="en">How is the project doing?</span></div>
+        <div class="bubble ai typing say-dots"><span></span><span></span><span></span></div>
+        <div class="bubble ai say-ai"><span class="zh">R1 完成 2/3，整体按期。T4 依赖 T2，周落后 2 天；陈在等你回答导出格式。要我把调整后的计划卡发你确认吗？</span><span class="en">R1 is 2/3 done and on schedule overall. T4 depends on T2, Zhou is 2 days behind, and Chen is waiting on your answer about the export format. Shall I send you an adjusted plan card to confirm?</span></div>
+      </div>
+      <div class="input"><span class="zh">和 Agent 说…</span><span class="en">Tell your Agent…</span><span class="send">↑</span></div>
+    </div>
+  </div>
+</section>
+
+<main class="wrap">
+
+  <section id="for">
+    <p class="eyebrow zh">适合谁</p><p class="eyebrow en">WHO IT IS FOR</p>
+    <h2 class="zh">有人负责、要看结果的地方，都用得上</h2>
+    <h2 class="en">Anywhere work has an owner and results matter</h2>
+    <div class="aud" style="margin-top:22px">
+      <div class="a"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 13h3M8 16h6"/></svg></div>
+        <h3 class="zh">公司项目管理</h3><h3 class="en">Company project management</h3>
+        <p class="zh">需求、排期、阻塞在同一本账上，不开周会也知道进度，Agent 干的活也有人负责。</p>
+        <p class="en">Requirements, schedules and blockers in one ledger. Know the status without a weekly meeting, and every Agent’s work has an owner.</p></div>
+      <div class="a"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/><path d="M16 4l1.5 1.5L20 3"/></svg></div>
+        <h3 class="zh">HR · 绩效考核</h3><h3 class="en">HR · Performance reviews</h3>
+        <p class="zh">谁负责什么、是否按期、验收结论和退回原因都留痕，评估有事实可依，不靠印象。</p>
+        <p class="en">Who owned what, whether it was on time, acceptance results and reasons for rework are all on record. Reviews rest on facts, not impressions.</p></div>
+      <div class="a"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg></div>
+        <h3 class="zh">高校导师 · 科研团队</h3><h3 class="en">Advisors · Research groups</h3>
+        <p class="zh">导师定课题和阶段标准，学生带着 Agent 推进；进展、卡点、成果一目了然，组会只谈问题。</p>
+        <p class="en">The advisor sets topics and milestones; students push forward with their Agents. Progress, blockers and results are visible, so group meetings focus on problems.</p></div>
+      <div class="a"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 5 5.5.8-4 3.9.9 5.5L12 14.6 7.1 17.2l.9-5.5-4-3.9 5.5-.8z"/></svg></div>
+        <h3 class="zh">个人创业 · 多 Agent</h3><h3 class="en">Solo founders · Many Agents</h3>
+        <p class="zh">一个人开着好几个 Agent 跑多条线：一本账管住所有进度，你只做判断和签字。</p>
+        <p class="en">One person, several Agents, many threads at once. One ledger keeps every thread in view; you only decide and sign.</p></div>
+    </div>
+  </section>
+
+  <section id="scenes">
+    <div class="talk-head">
+      <div>
+        <p class="eyebrow zh">每天 · 说一句</p><p class="eyebrow en">EVERY DAY · JUST SAY IT</p>
+        <h2 class="zh">建需求、理需求、存证据、排安排，都是一句话</h2>
+        <h2 class="en">Create, refine, record evidence, plan: each is one sentence</h2>
+        <p class="sub zh">Agent 读账本、写账本，把结果压成几行给你；需要人签字的地方才停下来等你。</p>
+        <p class="sub en">The Agent reads and writes the ledger and hands you the result in a few lines. It only stops for you where a person must sign.</p>
+      </div>
+      <div class="meter" aria-label="Attention buffer"><span class="m-l">Attention buffer</span><span class="m-bar"><i></i></span><span class="m-v zh">始终轻松</span><span class="m-v en">stays light</span></div>
+    </div>
+
+    <div class="scenes">
+      <article class="scene">
+        <div class="scene-h"><span class="num">1</span><h3 class="zh">建立需求</h3><h3 class="en">Create a requirement</h3></div>
+        <div class="mini">
+          <div class="bubble me"><span class="zh">把“导出报表”拆一下，排给周，下周五前交</span><span class="en">Break down “report export” for Zhou, due next Friday</span></div>
+          <div class="typing"><span></span><span></span><span></span></div>
+          <div class="bubble ai"><span class="zh">计划卡已交：2 个任务、1 个依赖，等你确认。</span><span class="en">Plan card in: 2 tasks, 1 dependency, waiting on you.</span>
+            <div class="tags"><span class="tag ag">T1 → T2</span><span class="tag">Zhou · 11/21</span><span class="tag gd"><span class="zh">确认后才生效</span><span class="en">takes effect on confirm</span></span></div></div>
+        </div>
+        <p class="instead zh">代替：<s>需求会 + 排期表 + 派活群</s></p><p class="instead en">Instead of: <s>planning meeting + schedule sheet + assignment chat</s></p>
+      </article>
+      <article class="scene">
+        <div class="scene-h"><span class="num">2</span><h3 class="zh">梳理需求</h3><h3 class="en">Refine requirements</h3></div>
+        <div class="mini">
+          <div class="bubble me"><span class="zh">回顾一下 R1：改过什么，还差什么？</span><span class="en">Recap R1: what changed, what is left?</span></div>
+          <div class="typing"><span></span><span></span><span></span></div>
+          <div class="bubble ai"><span class="zh">R1 改过 2 次范围，3 个任务完成 2 个。还差 T3，验收标准建议补一条。</span><span class="en">R1’s scope changed twice; 2 of 3 tasks are done. T3 is left, and I suggest one more acceptance criterion.</span>
+            <div class="tags"><span class="tag"><span class="zh">变更 2</span><span class="en">2 changes</span></span><span class="tag ok">2/3</span><span class="tag gd"><span class="zh">建议：补验收标准</span><span class="en">Suggest: add a criterion</span></span></div></div>
+        </div>
+        <p class="instead zh">代替：<s>翻需求文档历史 + 对照聊天记录</s></p><p class="instead en">Instead of: <s>diffing spec versions + scrolling chat history</s></p>
+      </article>
+      <article class="scene">
+        <div class="scene-h"><span class="num">3</span><h3 class="zh">建立存证，人来验收</h3><h3 class="en">Evidence in, people accept</h3></div>
+        <div class="mini">
+          <div class="bubble me"><span class="zh">T2 做完了吗？</span><span class="en">Is T2 done?</span></div>
+          <div class="typing"><span></span><span></span><span></span></div>
+          <div class="bubble ai"><span class="zh">已提交。验收标准 3/3 都附了证据，等你验收。</span><span class="en">Submitted. Evidence for all 3 acceptance criteria, waiting for your acceptance.</span>
+            <div class="tags"><span class="tag ok">✓ 3/3</span><span class="tag">PR #52</span><span class="tag"><span class="zh">测试 128 通过</span><span class="en">128 tests pass</span></span><span class="tag gd"><span class="zh">只有你能签字</span><span class="en">only you sign</span></span></div></div>
+        </div>
+        <p class="instead zh">代替：<s>“完成了！”+ 翻终端找证据</s></p><p class="instead en">Instead of: <s>“Done!” + digging through terminals</s></p>
+      </article>
+      <article class="scene">
+        <div class="scene-h"><span class="num">4</span><h3 class="zh">安排：只处理等你的事</h3><h3 class="en">Plan: only what waits on you</h3></div>
+        <div class="mini">
+          <div class="bubble me"><span class="zh">今天有什么等我处理的？</span><span class="en">What is waiting on me today?</span></div>
+          <div class="typing"><span></span><span></span><span></span></div>
+          <div class="bubble ai"><span class="zh">3 件，其余 Agent 在推进：</span><span class="en">3 things; Agents are moving the rest:</span>
+            <div class="tags"><span class="tag gd"><span class="zh">验收 T2</span><span class="en">Accept T2</span></span><span class="tag gd"><span class="zh">回答周：CSV 还是 Excel</span><span class="en">Answer Zhou: CSV or Excel</span></span><span class="tag gd"><span class="zh">确认交付 R1</span><span class="en">Sign off R1</span></span></div></div>
+        </div>
+        <p class="instead zh">代替：<s>87 条通知</s></p><p class="instead en">Instead of: <s>87 notifications</s></p>
+      </article>
+    </div>
+    <p class="note zh">对话为示意。</p><p class="note en">Conversations are illustrative.</p>
+
+    <div class="look">
+      <div class="look-text">
+        <p class="eyebrow zh">需要时 · 看一眼</p><p class="eyebrow en">WHEN YOU NEED IT · LOOK</p>
+        <h3 class="zh">不用学复杂交互，打开一页就清楚</h3>
+        <h3 class="en">No complex UI to learn. One page tells you.</h3>
+        <ul>
+          <li><b class="zh">谁拖进度</b><b class="en">Who is behind</b><span class="zh">落后几天、按当前速度预计何时完成</span><span class="en">how many days, and when it will land at this pace</span></li>
+          <li><b class="zh">谁需要帮助</b><b class="en">Who needs help</b><span class="zh">阻塞在等谁、问题挂了多久</span><span class="en">who a blocker waits on, and for how long</span></li>
+          <li><b class="zh">整体健康度</b><b class="en">Overall health</b><span class="zh">按期、风险、待验收，一个数</span><span class="en">on time, at risk, awaiting acceptance, in one number</span></li>
+          <li><b class="zh">安排</b><b class="en">The schedule</b><span class="zh">每个人和他的 Agent 手上在做什么</span><span class="en">what each person and their Agents are on</span></li>
+        </ul>
+      </div>
+      <div class="health" aria-hidden="true">
+        <div class="h-top">
+          <div class="ring" style="--v:.82"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="34" class="trk"/><circle cx="40" cy="40" r="34" class="val"/></svg><b>82</b></div>
+          <div><div class="h-l zh">项目健康度</div><div class="h-l en">Project health</div><div class="h-s zh">按期 · 1 项风险</div><div class="h-s en">On track · 1 risk</div></div>
+        </div>
+        <div class="ppl">
+          <div class="pp"><span class="av">林</span><span class="nm">Lin</span><span class="bar"><i style="--w:72%"></i></span><span class="st ok"><span class="zh">按期</span><span class="en">on time</span></span></div>
+          <div class="pp"><span class="av">周</span><span class="nm">Zhou</span><span class="bar"><i style="--w:38%;--c:var(--gold)"></i></span><span class="st gd"><span class="zh">落后 2 天</span><span class="en">2 days behind</span></span></div>
+          <div class="pp"><span class="av">陈</span><span class="nm">Chen</span><span class="bar"><i style="--w:55%;--c:var(--bad)"></i></span><span class="st bd"><span class="zh">需要帮助</span><span class="en">needs help</span></span></div>
+          <div class="pp"><span class="av ag">⌘</span><span class="nm"><span class="zh">Agent ×4</span><span class="en">Agents ×4</span></span><span class="bar"><i style="--w:64%;--c:var(--agent)"></i></span><span class="st ag"><span class="zh">在做 4 件</span><span class="en">on 4 tasks</span></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="proof">
+      <div class="p first"><b class="zh">真实跑过一轮：托管 MCP 首轮协作</b><b class="en">Run for real: first round over hosted MCP</b>
+        <span class="zh">在 Claude Code 里聊需求 → 网页确认计划卡 → 需求 ANN-R1 拆成 T1→T2→T3 → Agent 逐个开工、附证据 → 本人验收、确认交付。</span>
+        <span class="en">Talked it through in Claude Code → confirmed the plan card → ANN-R1 split into T1→T2→T3 → the Agent worked each with evidence → the owner accepted and signed off.</span></div>
+      <div class="p"><b>3 / 3</b><span class="zh">任务完成并验收</span><span class="en">tasks done and accepted</span></div>
+      <div class="p"><b class="gold">5</b><span class="zh">人只做了 5 个网页确认</span><span class="en">web confirmations were all the person did</span></div>
+    </div>
+
+    <div class="band">
+      <h2 class="zh">产出轻松翻倍，把时间留给新点子</h2>
+      <h2 class="en">Easily double your output. Keep the time for new ideas.</h2>
+      <p class="zh">首批试点面向已经在用 Claude Code、Codex 的团队。一分钟留个联系方式，开放时第一时间通知你。</p>
+      <p class="en">The first pilot is for teams already on Claude Code or Codex. Leave your details in a minute; we will tell you when it opens.</p>
+      <div class="cta">
+        <a class="btn primary" href="./#waitlist" data-keep-lang><span class="zh">加入 Waitlist →</span><span class="en">Join the waitlist →</span></a>
+        <a class="btn ghost" href="./" data-keep-lang><span class="zh">看原理与亮点</span><span class="en">See why it works</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section id="use">
+    <p class="eyebrow zh">怎么用</p><p class="eyebrow en">HOW YOU USE IT</p>
+    <h2 class="zh" style="margin-bottom:22px">一轮协作，四步</h2><h2 class="en" style="margin-bottom:22px">One round, four steps</h2>
+    <div class="steps">
+      <div class="step"><span class="who zh">你和 Agent</span><span class="who en">You + Agent</span>
+        <h3 class="zh">聊需求</h3><h3 class="en">Talk it through</h3>
+        <p class="zh">Agent 读项目和成员负载，交计划卡。</p><p class="en">The Agent reads the project and team load, then proposes a plan card.</p>
+        <div class="tools"><code>pmm_project_overview</code><code>pmm_propose_changes</code></div></div>
+      <div class="step human"><span class="who zh">你</span><span class="who en">You</span>
+        <h3 class="zh">网页确认</h3><h3 class="en">Confirm on the web</h3>
+        <p class="zh">逐项核对计划卡，确认后需求发布。</p><p class="en">Check each item; confirming publishes the requirement.</p>
+        <div class="tools"><code>PMM web</code></div></div>
+      <div class="step"><span class="who">Agent</span>
+        <h3 class="zh">开工、回报</h3><h3 class="en">Work and report</h3>
+        <p class="zh">写步骤、勾步骤、写日报；卡住就问人或标阻塞。</p><p class="en">Writes and ticks steps, files the daily report; asks or flags a blocker when stuck.</p>
+        <div class="tools"><code>pmm_start_task</code><code>pmm_check_step</code><code>pmm_ask</code></div></div>
+      <div class="step human"><span class="who zh">你</span><span class="who en">You</span>
+        <h3 class="zh">验收交付</h3><h3 class="en">Accept and sign off</h3>
+        <p class="zh">对照逐条证据验收，最后确认交付。</p><p class="en">Accept against per-criterion evidence, then sign off delivery.</p>
+        <div class="tools"><code>pmm_submit_for_review</code><code>PMM web</code></div></div>
+    </div>
+  </section>
+
+  <section id="connect">
+    <p class="eyebrow zh">接入 MCP</p><p class="eyebrow en">CONNECT OVER MCP</p>
+    <h2 class="zh" style="margin-bottom:22px">用你已经在用的 Agent，填一个地址</h2>
+    <h2 class="en" style="margin-bottom:22px">Use the Agent you already have. Add one address.</h2>
+    <div class="conn">
+      <div class="c">
+        <h3>Claude</h3>
+        <p class="zh">桌面应用、claude.ai、手机通用。设置 → 连接器 → 添加自定义连接器：</p>
+        <p class="en">Desktop app, claude.ai and mobile. Settings → Connectors → Add custom connector:</p>
+        <div class="code">https://pmm.aifor-u.com/mcp</div>
+        <p class="zh">高级设置里的客户端 ID 填 <code>pmm-mcp-claude</code>，点“连接”，浏览器登录一次。团队版由管理员给全组织加一次。</p>
+        <p class="en">Under advanced settings set client ID <code>pmm-mcp-claude</code>, click Connect and sign in once. On Team plans an admin adds it for everyone.</p>
+      </div>
+      <div class="c">
+        <h3>Claude Code</h3>
+        <p class="zh">终端里一条命令，第一次用时浏览器登录：</p>
+        <p class="en">One command; sign in in the browser on first use:</p>
+        <div class="code">claude mcp add --transport http pmm https://pmm.aifor-u.com/mcp</div>
+      </div>
+      <div class="c">
+        <h3>Codex</h3>
+        <p class="zh">添加后登录一次：</p>
+        <p class="en">Add it, then sign in once:</p>
+        <div class="code">codex mcp add pmm --url https://pmm.aifor-u.com/mcp
+codex mcp login pmm</div>
+      </div>
+    </div>
+    <p class="conn-foot zh">不装软件、不下载文件。试点账号开通后即可登录；Agent 以你的身份读写，看得到的只是你在网页上能看的。</p>
+    <p class="conn-foot en">Nothing to install or download. Sign in once your pilot account is open. The Agent reads and writes as you, and sees only what you can see on the web.</p>
+  </section>
+</main>
+
+<footer>
+  <span class="zh">PMM · 人和 Agent 共用的责任账本 · <a href="./#waitlist" data-keep-lang>加入 Waitlist</a></span>
+  <span class="en">PMM · The accountability ledger for people and Agents · <a href="./#waitlist" data-keep-lang>Join the waitlist</a></span>
+</footer>
+
+<script>
+(() => {
+  const root = document.documentElement, btn = document.getElementById('lang'), desc = document.querySelector('meta[name="description"]');
+  const isEn = () => root.classList.contains('en');
+  const META = {
+    zh: ['PMM 上手', '账本、依赖图、甘特、文档、看板，都压缩成和 Agent 的一段对话。经 MCP 同步进团队共用的一本账。'],
+    en: ['PMM · Get started', 'Boards, reports, chats and checklists, compressed into one conversation with your Agent and synced into one team ledger over MCP.'],
+  };
+
+  const apply = () => {
+    const l = isEn() ? 'en' : 'zh';
+    root.lang = isEn() ? 'en' : 'zh-CN'; document.title = META[l][0]; desc.content = META[l][1];
+    btn.textContent = isEn() ? '中文' : 'EN'; btn.lang = isEn() ? 'zh-CN' : 'en';
+    btn.setAttribute('aria-label', isEn() ? '切换到中文' : 'Switch to English');
+    document.querySelectorAll('[data-keep-lang]').forEach(a => {
+      const u = new URL(a.getAttribute('href'), location.href); u.searchParams.set('lang', l); a.href = u.pathname + u.search + u.hash;
+    });
+  };
+
+  // ---------- Fall: each view drops into the chat as the section scrolls ----------
+  const motion = root.classList.contains('motion');
+  const fall = document.getElementById('fall'), field = document.getElementById('field'), chat = document.getElementById('fchat');
+  const cards = [...field.querySelectorAll('.fv')], lits = [...chat.querySelectorAll('.ch')];
+  const clamp = v => Math.max(0, Math.min(1, v));
+  let geo = [];
+  const measure = () => {
+    cards.forEach(c => { c.style.transform = ''; });
+    const cr = chat.getBoundingClientRect(), tx = cr.left + cr.width / 2, ty = cr.top + 60;
+    geo = cards.map(c => { const r = c.getBoundingClientRect(); return { dx: tx - (r.left + r.width / 2), dy: ty - (r.top + r.height / 2), rot: parseFloat(getComputedStyle(c).getPropertyValue('--r')) || 0 }; });
+  };
+  let ticking = false;
+  const frame = () => {
+    ticking = false;
+    const r = fall.getBoundingClientRect(), total = fall.offsetHeight - innerHeight;
+    const p = clamp(-r.top / total);
+    let gulp = false;
+    cards.forEach((c, i) => {
+      const e = clamp((p - 0.06 - i * 0.05) / 0.3), k = e * e; // accelerate like a fall
+      const g = geo[i];
+      c.style.transform = `translate(${g.dx * k}px, ${g.dy * k}px) rotate(${g.rot * (1 - k) + 14 * k * (i % 2 ? 1 : -1)}deg) scale(${1 - 0.86 * k})`;
+      c.style.opacity = k < 0.8 ? 1 : Math.max(0, (1 - k) / 0.2);
+      lits[i].classList.toggle('lit', e >= 1);
+      if (e > 0.7 && e < 1) gulp = true;
+    });
+    chat.classList.toggle('gulp', gulp);
+    fall.dataset.ph = p > 0.5 ? 'b' : 'a';
+    fall.dataset.c = p > 0.88 ? '3' : p > 0.81 ? '2' : p > 0.74 ? '1' : '0';
+  };
+  const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(frame); } };
+  if (motion) {
+    const remeasure = () => { measure(); frame(); };
+    addEventListener('scroll', onScroll, { passive: true });
+    addEventListener('resize', remeasure);
+    // Measure with the section scrolled to its start, so the sticky frame is in place.
+    remeasure();
+    // Scenario chats and the health card play once when they come into view.
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('play'); io.unobserve(e.target); } }), { threshold: .3 });
+    document.querySelectorAll('.mini, .look').forEach(m => io.observe(m));
+  }
+
+  apply();
+  btn.addEventListener('click', () => {
+    root.classList.toggle('en');
+    try { localStorage.setItem('pmm-intro-lang', isEn() ? 'en' : 'zh'); } catch { /* 记不住选择也无妨 */ }
+    apply();
+    if (motion) { measure(); frame(); }
+  });
+
+  document.querySelectorAll('.code').forEach(box => {
+    const text = box.textContent.trim();
+    const wrap = document.createElement('div'); wrap.className = 'codebox';
+    const b = document.createElement('button'); b.type = 'button';
+    const label = () => isEn() ? 'Copy' : '复制';
+    b.textContent = label(); btn.addEventListener('click', () => { b.textContent = label(); });
+    b.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(text); b.textContent = isEn() ? 'Copied' : '已复制'; }
+      catch { b.textContent = isEn() ? 'Select it' : '请手动复制'; }
+      setTimeout(() => { b.textContent = label(); }, 1500);
+    });
+    box.replaceWith(wrap); wrap.append(box, b);
+  });
+})();
+</script>
+</body>
+</html>
