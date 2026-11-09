@@ -676,6 +676,8 @@ claude mcp add --transport http pmm https://pmm.aifor-u.com/mcp</div>
   document.querySelectorAll('.code').forEach(box => {
     const text = box.textContent.trim();
     const wrap = document.createElement('div'); wrap.className = 'codebox';
+    // A language-only box hands its zh/en class to the wrapper, or the other language's Copy button stays visible.
+    ['zh', 'en'].forEach(l => { if (box.classList.contains(l)) wrap.classList.add(l); });
     const b = document.createElement('button'); b.type = 'button';
     const label = () => isEn() ? 'Copy' : '复制';
     b.textContent = label(); btn.addEventListener('click', () => { b.textContent = label(); });
