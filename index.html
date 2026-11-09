@@ -537,6 +537,7 @@ footer { padding: 30px 0 60px; color: var(--text-3); font-size: 13px; text-align
     <div class="cta">
       <a class="btn primary" href="#waitlist">加入 Waitlist</a>
       <a class="btn ghost" href="#who">往下看为什么 ↓</a>
+      <a class="btn ghost" href="start.html">一页看懂怎么用 →</a>
     </div>
     <div class="hero-strip">
       <span><b>不做</b>执行者，接入它们</span>
@@ -881,6 +882,7 @@ footer { padding: 30px 0 60px; color: var(--text-3); font-size: 13px; text-align
     '活交给 Agent 干，': 'Let Agents do the work,', '责任留在人身上。': 'keep the accountability with people.',
     'PMM 是人和 Agent 共用的责任账本：每件事谁负责、交给了谁的 Agent、做到哪、证据是什么、谁验过。执行交给 Claude Code、Codex 这些最强的 Agent，人只在验收和确认两处签字。': 'PMM is the accountability ledger shared by people and Agents: who owns each piece of work, whose Agent has it, how far it has got, what the evidence is and who checked it. The work goes to the strongest Agents, such as Claude Code and Codex; people sign off in just two places, acceptance and confirmation.',
     '往下看为什么 ↓': 'See why ↓',
+    '一页看懂怎么用 →': 'How it works, in one page →',
     '不做': 'Not', '执行者，接入它们': ' an executor: it connects to them', '看板和文档，只记责任': ' a board or a doc tool: it records ownership',
     '可以': 'Runs', '私有部署，接企业身份': ' on your own servers, with company sign-in',
     '困境一 · 谁在做什么': 'Problem 1 · Who is doing what', '每个人手里都有好几个 Agent，': 'Everyone runs several Agents,', '活散在终端、分支和群聊里。': 'and the work is scattered across terminals, branches and chats.',
@@ -996,6 +998,7 @@ footer { padding: 30px 0 60px; color: var(--text-3); font-size: 13px; text-align
     langButton.textContent = lang === 'en' ? '中文' : 'EN';
     langButton.lang = lang === 'en' ? 'zh-CN' : 'en';
     langButton.setAttribute('aria-label', lang === 'en' ? '切换到中文' : 'Switch to English');
+    document.querySelectorAll('a[href^="start.html"]').forEach(a => { a.href = 'start.html?lang=' + lang; });
   }
   const stored = (() => { try { return localStorage.getItem(LANG_KEY); } catch { return null; } })();
   const asked = new URLSearchParams(location.search).get('lang');
