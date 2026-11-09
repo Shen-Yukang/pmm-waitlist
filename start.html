@@ -580,8 +580,8 @@ kimi mcp auth pmm</div>
         <h3>DeepSeek Harness</h3>
         <p class="zh">它只支持本机进程，把这段话交给它自己执行，第一次用时浏览器登录：</p>
         <p class="en">It runs MCP servers as local processes only. Hand it this and let it do the work; you sign in in the browser on first use:</p>
-        <div class="code zh">帮我接入 PMM：下载 https://pmm.aifor-u.com/downloads/pmm-agent.mjs 到 ~/.pmm-agent/；在当前档的 cordis.patch.yml 末尾加一条 @deepseek-ai/dsh-mcp-client，serverName 为 pmm，transport 为 stdio，command 为 node 的绝对路径，args 为 [pmm-agent.mjs 的绝对路径, "mcp", "--url", "https://pmm.aifor-u.com"]；然后调 pmm_whoami，按提示让我登录</div>
-        <div class="code en">Connect me to PMM: download https://pmm.aifor-u.com/downloads/pmm-agent.mjs into ~/.pmm-agent/; append a @deepseek-ai/dsh-mcp-client entry to this profile's cordis.patch.yml with serverName pmm, transport stdio, command the absolute path of node, args [the absolute path of pmm-agent.mjs, "mcp", "--url", "https://pmm.aifor-u.com"]; then call pmm_whoami and have me sign in when it asks</div>
+        <div class="code zh">帮我接入 PMM：下载 https://pmm.aifor-u.com/downloads/pmm-agent.mjs 到 ~/.pmm-agent/；在当前档的 cordis.patch.yml 末尾加一个 - insert: 块（新组件必须放在 insert 里，写在顶层会被忽略），块里一条 @deepseek-ai/dsh-mcp-client，id 为 mcp-pmm，serverName 为 pmm，transport 为 stdio，command 为 node 的绝对路径，args 为 [pmm-agent.mjs 的绝对路径, "mcp", "--url", "https://pmm.aifor-u.com"]；然后调 pmm_whoami，按提示让我登录</div>
+        <div class="code en">Connect me to PMM: download https://pmm.aifor-u.com/downloads/pmm-agent.mjs into ~/.pmm-agent/; append a - insert: block to this profile's cordis.patch.yml (new plugins must go inside insert; a top-level entry is ignored) holding one @deepseek-ai/dsh-mcp-client entry with id mcp-pmm, serverName pmm, transport stdio, command the absolute path of node, args [the absolute path of pmm-agent.mjs, "mcp", "--url", "https://pmm.aifor-u.com"]; then call pmm_whoami and have me sign in when it asks</div>
       </div>
       <div class="c">
         <h3 class="zh">Claude Code 用国产模型</h3>
