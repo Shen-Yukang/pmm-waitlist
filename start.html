@@ -562,8 +562,41 @@ footer { padding: 64px 0 56px; color: var(--t3); font-size: 13px; text-align: ce
 codex mcp login pmm</div>
       </div>
     </div>
-    <p class="conn-foot zh">不装软件、不下载文件。试点账号开通后即可登录；Agent 以你的身份读写，看得到的只是你在网页上能看的。</p>
-    <p class="conn-foot en">Nothing to install or download. Sign in once your pilot account is open. The Agent reads and writes as you, and sees only what you can see on the web.</p>
+    <h3 class="zh" style="margin:26px 0 12px">Kimi、DeepSeek、GLM、Qwen</h3>
+    <h3 class="en" style="margin:26px 0 12px">Kimi, DeepSeek, GLM, Qwen</h3>
+    <div class="conn">
+      <div class="c">
+        <h3>Kimi</h3>
+        <p class="zh">桌面版或 Kimi Code。把下面这句话发给 Kimi，它会自己加好，第一次用时浏览器登录：</p>
+        <p class="en">Desktop app or Kimi Code. Send Kimi this line; it adds PMM itself, and you sign in in the browser on first use:</p>
+        <div class="code zh">把 https://pmm.aifor-u.com/mcp 加成 MCP 服务器 pmm，用 OAuth 登录</div>
+        <div class="code en">Add https://pmm.aifor-u.com/mcp as an MCP server named pmm, signing in with OAuth</div>
+        <p class="zh">Kimi Code 也可以自己运行：</p>
+        <p class="en">Or run it yourself in Kimi Code:</p>
+        <div class="code">kimi mcp add --transport http --auth oauth pmm https://pmm.aifor-u.com/mcp
+kimi mcp auth pmm</div>
+      </div>
+      <div class="c">
+        <h3>DeepSeek Harness</h3>
+        <p class="zh">它只支持本机进程，把这段话交给它自己执行，第一次用时浏览器登录：</p>
+        <p class="en">It runs MCP servers as local processes only. Hand it this and let it do the work; you sign in in the browser on first use:</p>
+        <div class="code zh">帮我接入 PMM：下载 https://pmm.aifor-u.com/downloads/pmm-agent.mjs 到 ~/.pmm-agent/；在当前档的 cordis.patch.yml 末尾加一条 @deepseek-ai/dsh-mcp-client，serverName 为 pmm，transport 为 stdio，command 为 node 的绝对路径，args 为 [pmm-agent.mjs 的绝对路径, "mcp", "--url", "https://pmm.aifor-u.com"]；然后调 pmm_whoami，按提示让我登录</div>
+        <div class="code en">Connect me to PMM: download https://pmm.aifor-u.com/downloads/pmm-agent.mjs into ~/.pmm-agent/; append a @deepseek-ai/dsh-mcp-client entry to this profile's cordis.patch.yml with serverName pmm, transport stdio, command the absolute path of node, args [the absolute path of pmm-agent.mjs, "mcp", "--url", "https://pmm.aifor-u.com"]; then call pmm_whoami and have me sign in when it asks</div>
+      </div>
+      <div class="c">
+        <h3 class="zh">Claude Code 用国产模型</h3>
+        <h3 class="en">Claude Code on these models</h3>
+        <p class="zh">DeepSeek、智谱 GLM、Kimi、通义千问都有 Anthropic 兼容接口。把 Claude Code 的模型指过去，PMM 照样一条命令：</p>
+        <p class="en">DeepSeek, Zhipu GLM, Kimi and Qwen all offer Anthropic-compatible endpoints. Point Claude Code at one, and PMM is still one command:</p>
+        <div class="code">export ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+export ANTHROPIC_AUTH_TOKEN=&lt;your key&gt;
+claude mcp add --transport http pmm https://pmm.aifor-u.com/mcp</div>
+        <p class="zh">地址以各家文档为准，例如智谱 <code>https://open.bigmodel.cn/api/anthropic</code>、Kimi <code>https://api.moonshot.cn/anthropic</code>。</p>
+        <p class="en">Check each provider's docs for its address, e.g. Zhipu <code>https://open.bigmodel.cn/api/anthropic</code>, Kimi <code>https://api.moonshot.cn/anthropic</code>.</p>
+      </div>
+    </div>
+    <p class="conn-foot zh">Claude、Claude Code、Codex、Kimi 不装软件、不下载文件；DeepSeek Harness 由它自己下载一个本机小程序。试点账号开通后即可登录；Agent 以你的身份读写，看得到的只是你在网页上能看的，令牌不进入 Agent 的对话和配置文件。</p>
+    <p class="conn-foot en">Claude, Claude Code, Codex and Kimi need nothing installed or downloaded; DeepSeek Harness fetches one small local program itself. Sign in once your pilot account is open. The Agent reads and writes as you, sees only what you can see on the web, and never holds your token in its chat or config.</p>
   </section>
 </main>
 
