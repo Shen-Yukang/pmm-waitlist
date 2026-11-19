@@ -544,7 +544,7 @@ footer { padding: 64px 0 56px; color: var(--t3); font-size: 13px; text-align: ce
         <h3>Claude</h3>
         <p class="zh">桌面应用、claude.ai、手机通用。设置 → 连接器 → 添加自定义连接器：</p>
         <p class="en">Desktop app, claude.ai and mobile. Settings → Connectors → Add custom connector:</p>
-        <div class="code">https://pmm.aifor-u.com/mcp</div>
+        <div class="code">https://moonlet.aifor-u.com/mcp</div>
         <p class="zh">高级设置里的客户端 ID 填 <code>pmm-mcp-claude</code>，点“连接”，浏览器登录一次。团队版由管理员给全组织加一次。</p>
         <p class="en">Under advanced settings set client ID <code>pmm-mcp-claude</code>, click Connect and sign in once. On Team plans an admin adds it for everyone.</p>
       </div>
@@ -552,13 +552,13 @@ footer { padding: 64px 0 56px; color: var(--t3); font-size: 13px; text-align: ce
         <h3>Claude Code</h3>
         <p class="zh">终端里一条命令，第一次用时浏览器登录：</p>
         <p class="en">One command; sign in in the browser on first use:</p>
-        <div class="code">claude mcp add --transport http pmm https://pmm.aifor-u.com/mcp</div>
+        <div class="code">claude mcp add --transport http pmm https://moonlet.aifor-u.com/mcp</div>
       </div>
       <div class="c">
         <h3>Codex</h3>
         <p class="zh">添加后登录一次：</p>
         <p class="en">Add it, then sign in once:</p>
-        <div class="code">codex mcp add pmm --url https://pmm.aifor-u.com/mcp
+        <div class="code">codex mcp add pmm --url https://moonlet.aifor-u.com/mcp
 codex mcp login pmm</div>
       </div>
     </div>
@@ -569,19 +569,19 @@ codex mcp login pmm</div>
         <h3>Kimi</h3>
         <p class="zh">桌面版或 Kimi Code。把下面这句话发给 Kimi，它会自己加好，第一次用时浏览器登录：</p>
         <p class="en">Desktop app or Kimi Code. Send Kimi this line; it adds PMM itself, and you sign in in the browser on first use:</p>
-        <div class="code zh">把 https://pmm.aifor-u.com/mcp 加成 MCP 服务器 pmm，用 OAuth 登录</div>
-        <div class="code en">Add https://pmm.aifor-u.com/mcp as an MCP server named pmm, signing in with OAuth</div>
+        <div class="code zh">把 https://moonlet.aifor-u.com/mcp 加成 MCP 服务器 pmm，用 OAuth 登录</div>
+        <div class="code en">Add https://moonlet.aifor-u.com/mcp as an MCP server named pmm, signing in with OAuth</div>
         <p class="zh">Kimi Code 也可以自己运行：</p>
         <p class="en">Or run it yourself in Kimi Code:</p>
-        <div class="code">kimi mcp add --transport http --auth oauth pmm https://pmm.aifor-u.com/mcp
+        <div class="code">kimi mcp add --transport http --auth oauth pmm https://moonlet.aifor-u.com/mcp
 kimi mcp auth pmm</div>
       </div>
       <div class="c">
         <h3>DeepSeek Harness</h3>
         <p class="zh">它只支持本机进程，把这段话交给它自己执行，第一次用时浏览器登录：</p>
         <p class="en">It runs MCP servers as local processes only. Hand it this and let it do the work; you sign in in the browser on first use:</p>
-        <div class="code zh">帮我接入 PMM：下载 https://pmm.aifor-u.com/downloads/pmm-agent.mjs 到 ~/.pmm-agent/；在当前档的 cordis.patch.yml 末尾加一个 - insert: 块（新组件必须放在 insert 里，写在顶层会被忽略），块里一条 @deepseek-ai/dsh-mcp-client，id 为 mcp-pmm，serverName 为 pmm，transport 为 stdio，command 为 node 的绝对路径，args 为 [pmm-agent.mjs 的绝对路径, "mcp", "--url", "https://pmm.aifor-u.com"]；然后调 pmm_whoami，按提示让我登录</div>
-        <div class="code en">Connect me to PMM: download https://pmm.aifor-u.com/downloads/pmm-agent.mjs into ~/.pmm-agent/; append a - insert: block to this profile's cordis.patch.yml (new plugins must go inside insert; a top-level entry is ignored) holding one @deepseek-ai/dsh-mcp-client entry with id mcp-pmm, serverName pmm, transport stdio, command the absolute path of node, args [the absolute path of pmm-agent.mjs, "mcp", "--url", "https://pmm.aifor-u.com"]; then call pmm_whoami and have me sign in when it asks</div>
+        <div class="code zh">帮我接入 PMM：下载 https://moonlet.aifor-u.com/downloads/pmm-agent.mjs 到 ~/.pmm-agent/；在当前档的 cordis.patch.yml 末尾加一个 - insert: 块（新组件必须放在 insert 里，写在顶层会被忽略），块里一条 @deepseek-ai/dsh-mcp-client，id 为 mcp-pmm，serverName 为 pmm，transport 为 stdio，command 为 node 的绝对路径，args 为 [pmm-agent.mjs 的绝对路径, "mcp", "--url", "https://moonlet.aifor-u.com"]；然后调 pmm_whoami，按提示让我登录</div>
+        <div class="code en">Connect me to PMM: download https://moonlet.aifor-u.com/downloads/pmm-agent.mjs into ~/.pmm-agent/; append a - insert: block to this profile's cordis.patch.yml (new plugins must go inside insert; a top-level entry is ignored) holding one @deepseek-ai/dsh-mcp-client entry with id mcp-pmm, serverName pmm, transport stdio, command the absolute path of node, args [the absolute path of pmm-agent.mjs, "mcp", "--url", "https://moonlet.aifor-u.com"]; then call pmm_whoami and have me sign in when it asks</div>
       </div>
       <div class="c">
         <h3 class="zh">Claude Code 用国产模型</h3>
@@ -590,7 +590,7 @@ kimi mcp auth pmm</div>
         <p class="en">DeepSeek, Zhipu GLM, Kimi and Qwen all offer Anthropic-compatible endpoints. Point Claude Code at one, and PMM is still one command:</p>
         <div class="code">export ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
 export ANTHROPIC_AUTH_TOKEN=&lt;your key&gt;
-claude mcp add --transport http pmm https://pmm.aifor-u.com/mcp</div>
+claude mcp add --transport http pmm https://moonlet.aifor-u.com/mcp</div>
         <p class="zh">地址以各家文档为准，例如智谱 <code>https://open.bigmodel.cn/api/anthropic</code>、Kimi <code>https://api.moonshot.cn/anthropic</code>。</p>
         <p class="en">Check each provider's docs for its address, e.g. Zhipu <code>https://open.bigmodel.cn/api/anthropic</code>, Kimi <code>https://api.moonshot.cn/anthropic</code>.</p>
       </div>
